@@ -1,0 +1,31 @@
+name: Nightly Slow Tests
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 2 * * *"   # daily 2am UTC
+
+jobs:
+  slow-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 22
+        uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: "21"
+          cache: maven
+
+      - name: Run ALL tests (including performance/fuzz/system)
+        run: mvn -B test -Djunit.exclude.tags=
+
+      - name: Upload CSV artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: target/test-results/*.csv
