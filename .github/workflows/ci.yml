@@ -22,4 +22,4 @@ jobs:
           cache: maven
 
       - name: Run tests (fast suite)
-        run: mvn -B test
+        run: mvn -B test -Djunit.jupiter.tags.exclude=performance,fuzz,system
