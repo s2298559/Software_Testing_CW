@@ -3,7 +3,7 @@ package com.example.restservice;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DynamicTest;
 import org.springframework.web.client.RestTemplate;
-
+import org.junit.jupiter.api.Tag;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -18,7 +18,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * because that reveals system limits (LO4 evidence).
  */
 @Tag("performance")
-@Tag("statistical")
 public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
 
     private ILPRestService liveService;

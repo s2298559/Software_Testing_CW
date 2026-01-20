@@ -10,7 +10,7 @@ import java.nio.file.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-
+import org.junit.jupiter.api.Tag;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -25,8 +25,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * 2) trials CSV: one row per trial (records outcome + duration)
  */
 @Tag("fuzz")
-@Tag("robustness")
-@Tag("statistical")
 public class DeliveryPathCalculatorFuzzWithCsvTests {
 
     private static final int TRIALS = 100;
