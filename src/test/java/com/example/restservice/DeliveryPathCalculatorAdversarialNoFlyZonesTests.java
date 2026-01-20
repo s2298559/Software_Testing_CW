@@ -25,7 +25,6 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
     private List<Region> realZones;
     private List<Restaurant> restaurants;
 
-    // Appleton Tower (from your other tests / typical spec)
     private static final LngLat AT_LOCATION = DeliveryPathCalculator.AT_LOCATION;
 
     @BeforeEach
@@ -72,7 +71,6 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
      * Finds the first injected count where success rate drops below threshold.
      *
      * This test doesn't fail if the breakpoint is low; it prints it.
-     * (Good LO4 evidence.)
      */
     @Test
     void adversarialZones_breakpointDiscovery_printsFirstFailureDensity() {
@@ -100,12 +98,7 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
                 break;
             }
         }
-
-        // We do not assert a particular breakpoint — we just report it.
-        // But we can assert that the test itself ran and produced results.
         assertNotNull(start);
-        // Optional: if you want it to always "flag" early breakdowns:
-        // assertNull(breakpoint, "Success rate dropped below threshold at zones=" + breakpoint);
     }
 
     // --------------------------
@@ -115,7 +108,6 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
     private void runAdversarialScenario(Restaurant startRestaurant, int injectedCount, int runs) {
         ScenarioResult res = runScenario(startRestaurant, injectedCount, runs);
 
-        // Console output is useful for evidence screenshots / logs
         System.out.printf(
                 Locale.UK,
                 "Adversarial: start=%s injectedZones=%d runs=%d success=%d/%d (%.0f%%) median=%dms p95=%dms max=%dms%n",
@@ -130,16 +122,12 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
                 res.maxMs()
         );
 
-        // Assertions: keep them reasonable to avoid flaky failures.
-        // For small counts we expect mostly success; for large counts it may break.
         if (injectedCount <= 25) {
             assertTrue(res.successRate() >= 0.8,
                     "Unexpected low success rate for mild adversarial density: " +
                             (100.0 * res.successRate()) + "%");
         }
 
-        // Still keep QR1 style check: when it succeeds, should not be extremely slow.
-        // Use p95 timing only across successful runs; see implementation below.
         if (res.successes > 0) {
             assertTrue(res.p95Ms() < 60_000,
                     "Performance regression: p95=" + res.p95Ms() + "ms under injectedZones=" + injectedCount);
@@ -148,10 +136,8 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
 
     private ScenarioResult runScenario(Restaurant startRestaurant, int injectedCount, int runs) {
 
-        // Build order that forces this restaurant to be pickup
         Order order = buildOrderFromRestaurant(startRestaurant);
 
-        // Build calculator with real zones + adversarial corridor zones
         List<Region> inflatedZones = new ArrayList<>(realZones);
         inflatedZones.addAll(generateAdversarialZonesAlongCorridor(
                 startRestaurant.getLocation(),
@@ -164,7 +150,6 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
                 new OrderValidator()
         );
 
-        // Measure: only successful runs count toward timing stats
         List<Long> successfulTimes = new ArrayList<>();
         int success = 0;
 
@@ -174,7 +159,6 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
                 List<LngLat> path = calc.calculatePath(order);
                 long t1 = System.currentTimeMillis();
 
-                // If it returns a path, consider success (basic sanity)
                 assertNotNull(path);
                 assertFalse(path.isEmpty());
                 assertEquals(AT_LOCATION, path.getLast(), "Last point should be AT_LOCATION");
@@ -182,14 +166,10 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
                 success++;
                 successfulTimes.add(t1 - t0);
             } catch (RuntimeException ex) {
-                // Expected failure mode: cannot find a path
-                // Your implementation message:
                 String msg = ex.getMessage() == null ? "" : ex.getMessage();
                 if (!msg.contains("No path found to the goal")) {
-                    // Unexpected failure type: surface it
                     throw ex;
                 }
-                // else: counted as failure, continue
             }
         }
 
@@ -215,26 +195,22 @@ public class DeliveryPathCalculatorAdversarialNoFlyZonesTests {
     private static List<Region> generateAdversarialZonesAlongCorridor(LngLat start, LngLat goal, int count) {
         List<Region> out = new ArrayList<>(count);
 
-        Random rng = new Random(1234567L + count); // deterministic per count
+        Random rng = new Random(1234567L + count);
 
-        // zone size: tune these if you want it harder/easier
-        double halfSize = 0.00012; // similar scale to step length (0.00015)
+        double halfSize = 0.00012;
 
         for (int i = 0; i < count; i++) {
 
-            // Position along corridor: t in (0.1..0.9) so not exactly at endpoints
             double t = 0.1 + 0.8 * (i / (double) Math.max(1, count));
 
             double lng = lerp(start.getLng(), goal.getLng(), t);
             double lat = lerp(start.getLat(), goal.getLat(), t);
 
-            // jitter around the line (perpendicular-ish noise)
             lng += (rng.nextDouble() - 0.5) * 0.00035;
             lat += (rng.nextDouble() - 0.5) * 0.00035;
 
             LngLat c = new LngLat(lng, lat);
 
-            // Alternate shapes (square vs diamond) for variation
             Region zone = (i % 2 == 0)
                     ? squareAround(c, halfSize, "ADV_SQ_" + i)
                     : diamondAround(c, halfSize, "ADV_DI_" + i);

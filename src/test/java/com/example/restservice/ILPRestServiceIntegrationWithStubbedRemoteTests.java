@@ -83,7 +83,6 @@ class ILPRestServiceIntegrationWithStubbedRemoteTests {
 
         for (LngLat p : v) {
             assertNotNull(p);
-            // If LngLat uses primitive doubles, these are never null, but we still check object exists.
             assertFalse(Double.isNaN(p.getLng()));
             assertFalse(Double.isNaN(p.getLat()));
         }
@@ -93,7 +92,6 @@ class ILPRestServiceIntegrationWithStubbedRemoteTests {
 
     @Test
     void getNoFlyZones_closedPolygon_check_FR3_contract() {
-        // FR3/FR4 mention enclosed polygons; here we assert the remote data is closed as expected.
         server.expect(requestTo(NO_FLY))
                 .andRespond(withSuccess("""
                     [

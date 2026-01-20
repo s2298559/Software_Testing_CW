@@ -16,12 +16,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * CSV-based performance + statistical experiments.
- *
- * IMPORTANT IMPLEMENTATION NOTE (why injection matters):
- * DeliveryPathCalculator identifies the restaurant using:
- *   orderValidator.getPizzaToRestaurantMap().get(pizzaName)
- * So synthetic restaurants MUST be injected into that map, otherwise:
- *   "Unable to identify the restaurant for the given order."
  */
 @Tag("performance")
 @Tag("statistical")
@@ -29,15 +23,12 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
 
     private static final long THRESHOLD_MS = 60_000;
 
-    // Scale further if you want, but be mindful of runtime
     private static final int[] ZONE_COUNTS = new int[]{
             1, 5, 10, 25, 50, 100, 200, 300, 500, 750, 1000, 1500, 2000, 5000, 10000, 20000, 40000
     };
 
-    // Runs per scenario (increase for stronger statistics; also increases runtime)
     private static final int RUNS_PER_SCENARIO = 5;
 
-    // Hard stop so extreme cases (e.g. London) don't stall your suite
     private static final Duration HARD_TIMEOUT = Duration.ofSeconds(70);
 
     private ILPRestService liveService;
@@ -93,15 +84,12 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
     @Test
     void csvExperiment_findBreakpointOver60s_acrossZoneCountsAndStartPoints() throws IOException {
 
-        // 1) A few real restaurants (Edinburgh-area)
         List<Restaurant> starts = new ArrayList<>(pickRestaurants(realRestaurants, 3));
 
-        // 2) Add synthetic longer-distance starts (including London)
         starts.addAll(syntheticRestaurantsFarAway());
 
-        // 3) Two modes:
-        //    FAR_AWAY = stress CPU with zones that shouldn't block
-        //    CORRIDOR = adversarial zones placed near start->AT corridor
+        // FAR_AWAY = stress CPU with zones that shouldn't block
+        // CORRIDOR = adversarial zones placed near start->AT corridor
         List<String> zoneModes = List.of("FAR_AWAY", "CORRIDOR");
 
         for (Restaurant start : starts) {
@@ -122,7 +110,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
                             stats.successes, stats.runs, stats.medianMs(), stats.p95Ms(), stats.maxMs()
                     );
 
-                    // Breakpoint definition: any run >= 60s
                     if (breakpoint == null && stats.maxMs() >= THRESHOLD_MS) {
                         breakpoint = injected;
                     }
@@ -153,7 +140,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
 
         String scenarioId = "perf_" + zoneMode;
 
-        // Build zones = real + injected
         List<Region> zones = new ArrayList<>(realZones);
         if ("FAR_AWAY".equals(zoneMode)) {
             zones.addAll(generateSyntheticZonesFarAway(injectedZones));
@@ -161,7 +147,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
             zones.addAll(generateAdversarialZonesAlongCorridor(start.getLocation(), AT, injectedZones));
         }
 
-        // ✅ Critical fix: use a real OrderValidator AND inject the restaurant into pizzaToRestaurantMap
         OrderValidator validator = new OrderValidator();
         injectRestaurantsIntoValidator(validator, List.of(start));
 
@@ -170,7 +155,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
                 validator
         );
 
-        // Create order whose pizza name matches start's menu
         Pizza menuItem = start.getMenu().getFirst();
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza(menuItem.getName(), menuItem.getPriceInPence())));
@@ -183,7 +167,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
             long t0 = System.currentTimeMillis();
 
             try {
-                // Hard timeout guard to stop extreme cases hanging the suite
                 List<LngLat> path = assertTimeoutPreemptively(HARD_TIMEOUT, () -> calc.calculatePath(order));
 
                 long t1 = System.currentTimeMillis();
@@ -196,7 +179,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
                 writeCsvRow(scenarioId, start, startDistM, injectedZones, zoneMode, run, ok, dt, "");
 
             } catch (AssertionError ae) {
-                // timeout will come through as AssertionError from assertTimeoutPreemptively
                 long t1 = System.currentTimeMillis();
                 long dt = t1 - t0;
                 times.add(dt);
@@ -253,10 +235,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
         return cleaned;
     }
 
-    // ----------------------------
-    // ✅ Restaurant injection helper (the important part)
-    // ----------------------------
-
     private static void injectRestaurantsIntoValidator(OrderValidator validator, List<Restaurant> restaurants) {
         for (Restaurant r : restaurants) {
             if (r.getMenu() == null) continue;
@@ -265,10 +243,6 @@ public class DeliveryPathCalculatorPerformanceScalingTests {
             }
         }
     }
-
-    // ----------------------------
-    // Synthetic restaurants (unique pizza per restaurant)
-    // ----------------------------
 
     private static List<Restaurant> syntheticRestaurantsFarAway() {
 

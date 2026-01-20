@@ -145,7 +145,7 @@ public class IlpRestServiceTests {
     }
 
     // --------------------
-    // getRestaurants (IMPORTANT: call instance method, not static)
+    // getRestaurants
     // --------------------
 
     @Test

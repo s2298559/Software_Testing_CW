@@ -16,8 +16,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Integration tests: HTTP -> Controller -> (real app wiring) -> HTTP response.
  * Focus on JSON binding/validation and tolerant numeric checks.
- *
- * NOTE: Avoid duplicating pure system-smoke checks already in IlpSystemTests (e.g., /isAlive, malformed JSON 400).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -33,7 +31,7 @@ class IlpControllerIntegrationTests {
     }
 
     // -------------------------
-    // uuid (keep here if you want hard-coded assertion)
+    // uuid
     // -------------------------
 
     @Test
@@ -75,7 +73,6 @@ class IlpControllerIntegrationTests {
 
     @Test
     void distanceTo_overHttp_missingFields_returns400() throws Exception {
-        // Missing position2
         String body = """
           {"position1":{"lng":-3.192473,"lat":55.946233}}
         """;
@@ -118,7 +115,7 @@ class IlpControllerIntegrationTests {
     }
 
     // -------------------------
-    // nextPosition (FR2 + QR2) - add property-style + numeric tolerance
+    // nextPosition (FR2 + QR2)
     // -------------------------
 
     @Test
@@ -208,7 +205,6 @@ class IlpControllerIntegrationTests {
             var mvcResult = mockMvc.perform(post("/nextPosition")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(req)))
-                    // spec says all 16 angles are allowed; if 0 fails, document it as a weakness
                     .andExpect(status().is2xxSuccessful())
                     .andReturn();
 

@@ -22,22 +22,18 @@ class DeliveryPathCalculatorTest {
         RestTemplate restTemplate = new RestTemplate();
         ilpRestService = new ILPRestService(restTemplate);
 
-        // Dynamically fetch restaurants
         List<Restaurant> restaurants = ILPRestService.getRestaurants();
         assertNotNull(restaurants, "Failed to fetch restaurants from the live service");
         assertFalse(restaurants.isEmpty(), "No restaurant data available from the live service");
 
-        // Dynamically fetch no-fly zones
         List<Region> noFlyZones = ilpRestService.getNoFlyZones();
         assertNotNull(noFlyZones, "Failed to fetch no-fly zones from the live service");
         assertFalse(noFlyZones.isEmpty(), "No no-fly zone data available from the live service");
 
-        // Dynamically fetch central area
         List<Region> centralArea = ilpRestService.getCentralArea();
         assertNotNull(centralArea, "Failed to fetch central area from the live service");
         assertFalse(centralArea.isEmpty(), "No central area data available from the live service");
 
-        // Mock OrderValidator with live data
         OrderValidator orderValidator = new OrderValidator();
         deliveryPathCalculator = new DeliveryPathCalculator(ilpRestService, orderValidator);
     }
@@ -45,43 +41,34 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testCalculatePathValidOrder() {
-        // Arrange
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // Act
         List<LngLat> path = deliveryPathCalculator.calculatePath(order);
 
-        // Assert
         assertNotNull(path, "Path should not be null");
         assertFalse(path.isEmpty(), "Path should not be empty");
 
-        // Validate the first point (restaurant location)
         assertEquals(-3.1912869215011597, path.getFirst().getLng(), 1e-6);
         assertEquals(55.945535152517735, path.getFirst().getLat(), 1e-6);
 
-        // Validate the last point (AT_LOCATION)
         LngLat lastPoint = path.getLast();
         assertEquals(DeliveryPathCalculator.AT_LOCATION.getLng(), lastPoint.getLng(), 1e-6);
         assertEquals(DeliveryPathCalculator.AT_LOCATION.getLat(), lastPoint.getLat(), 1e-6);
 
-        // Check that the path contains AT_LOCATION
         assertTrue(path.contains(DeliveryPathCalculator.AT_LOCATION), "Path should contain AT_LOCATION");
     }
 
     @Test
     void testCalculatePathNoFlyZoneBlocked() {
-        // Arrange
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // Act & Assert
         List<LngLat> path = deliveryPathCalculator.calculatePath(order);
 
         assertNotNull(path, "Path should not be null");
         assertFalse(path.isEmpty(), "Path should not be empty");
 
-        // Verify no paths intersect no-fly zones
         List<Region> noFlyZones = ilpRestService.getNoFlyZones();
         for (int i = 0; i < path.size() - 1; i++) {
             LngLat from = path.get(i);
@@ -95,36 +82,28 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testWithinCentralArea() {
-        // Arrange
         LngLat inside = new LngLat(-3.190000, 55.945000);
         LngLat outside = new LngLat(-3.210000, 55.950000);
 
-        // Act & Assert
         assertTrue(deliveryPathCalculator.isWithinCentralArea(inside), "Point should be within the central area");
         assertFalse(deliveryPathCalculator.isWithinCentralArea(outside), "Point should be outside the central area");
     }
 
     @Test
     void testCalculatePathHoveringAtLocations() {
-        // Arrange
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // Act
         List<LngLat> path = deliveryPathCalculator.calculatePath(order);
 
-        // Assert
         assertNotNull(path, "Path should not be null");
         assertFalse(path.isEmpty(), "Path should not be empty");
 
-        // Validate that the drone hovers over the restaurant (first two points should be identical)
         assertEquals(path.get(0), path.get(1), "Drone should hover at the restaurant");
 
-        // Validate that the drone hovers over the AT location (last two points should be identical)
         int lastIndex = path.size() - 1;
         assertEquals(path.get(lastIndex - 1), path.get(lastIndex), "Drone should hover at the AT location");
 
-        // Additional validation for overall path
         assertEquals(-3.1912869215011597, path.getFirst().getLng(), 1e-6, "First point longitude mismatch");
         assertEquals(55.945535152517735, path.getFirst().getLat(), 1e-6, "First point latitude mismatch");
         assertEquals(DeliveryPathCalculator.AT_LOCATION.getLng(), path.get(lastIndex).getLng(), 1e-6, "Last point longitude mismatch");
@@ -133,16 +112,13 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testCalculatePathResponseTime() {
-        // Arrange
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // Act
         long startTime = System.currentTimeMillis();
         List<LngLat> path = deliveryPathCalculator.calculatePath(order);
         long endTime = System.currentTimeMillis();
 
-        // Assert
         assertNotNull(path, "Path should not be null");
         assertFalse(path.isEmpty(), "Path should not be empty");
 
@@ -153,11 +129,9 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testCalculatePathInvalidRestaurant() {
-        // Arrange
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("Invalid Pizza", 500)));
 
-        // Act & Assert
         Exception exception = assertThrows(IllegalArgumentException.class, () -> {
             deliveryPathCalculator.calculatePath(order);
         });
@@ -211,7 +185,6 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testRestaurantAndDestinationNotInsideNoFlyZones_FR3() {
-        // Using R1 restaurant coords as in your existing tests (live dataset should match)
         LngLat restaurant = new LngLat(-3.1912869215011597, 55.945535152517735);
         LngLat destination = DeliveryPathCalculator.AT_LOCATION;
 
@@ -247,7 +220,6 @@ class DeliveryPathCalculatorTest {
 
     /**
      * Simple ray-casting point-in-polygon.
-     * Assumes polygon vertices are ordered and (usually) closed.
      */
     private static boolean pointInPolygon(LngLat point, List<LngLat> polygon) {
         if (point == null || polygon == null || polygon.size() < 3) return false;
@@ -277,7 +249,6 @@ class DeliveryPathCalculatorTest {
 
         Region zoneCoveringDestination = squareAround(destination, 0.0003, "DEST_BLOCK");
 
-        // Keep central area as the real one so FR4 logic remains meaningful
         List<Region> realCentral = ilpRestService.getCentralArea();
 
         DeliveryPathCalculator calc = new DeliveryPathCalculator(
@@ -291,7 +262,6 @@ class DeliveryPathCalculatorTest {
         try {
             List<LngLat> path = calc.calculatePath(order);
 
-            // If your implementation signals “cannot deliver” by empty path:
             assertTrue(path == null || path.isEmpty(),
                     "If destination is inside no-fly zone, system should refuse to deliver (empty/null path expected)");
         } catch (RuntimeException ex) {
@@ -302,7 +272,6 @@ class DeliveryPathCalculatorTest {
 
     @Test
     void testCannotDeliver_whenPickupInsideNoFlyZone_FR3() {
-        // From your existing test expectations (R1 location)
         LngLat pickup = new LngLat(-3.1912869215011597, 55.945535152517735);
 
         Region zoneCoveringPickup = squareAround(pickup, 0.0003, "PICKUP_BLOCK");
@@ -333,7 +302,6 @@ class DeliveryPathCalculatorTest {
                 new LngLat(-3.192473, 55.946233),
                 new LngLat(-3.192473, 55.942617),
                 new LngLat(-3.184319, 55.942617)
-                // not closed
         ));
 
         DeliveryPathCalculator calc = new DeliveryPathCalculator(
@@ -341,7 +309,6 @@ class DeliveryPathCalculatorTest {
                 new OrderValidator()
         );
 
-        // A “good” implementation would throw or refuse to plan.
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
@@ -365,7 +332,6 @@ class DeliveryPathCalculatorTest {
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // If this does NOT throw, that’s the weakness: central polygon validity isn't enforced.
         assertDoesNotThrow(() -> calc.calculatePath(order),
                 "Currently, open central polygon may not be validated/enforced (document as FR4 weakness)");
     }
@@ -392,7 +358,6 @@ class DeliveryPathCalculatorTest {
     }
 
     private static Region squareAround(LngLat c, double d, String name) {
-        // closed square polygon
         return new Region(name, List.of(
                 new LngLat(c.getLng() - d, c.getLat() - d),
                 new LngLat(c.getLng() - d, c.getLat() + d),

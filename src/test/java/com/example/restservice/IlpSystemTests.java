@@ -13,8 +13,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * System tests: treat the service as a black box over HTTP.
- * These tests increase FR5 + QR3 coverage (status codes, JSON shape, robustness),
- * and add technique coverage (property-style loops + micro-performance regression).
  */
 @Tag("system")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -178,7 +176,6 @@ class IlpSystemTests {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        // Not closed; should be rejected by controller validation
         String body = """
           {
             "position": {"lng": -3.190, "lat": 55.944},
@@ -210,8 +207,6 @@ class IlpSystemTests {
         assertTrue(resp.getStatusCodeValue() == 415 || resp.getStatusCodeValue() == 400,
                 "Expected 415 or 400 but got " + resp.getStatusCodeValue());
     }
-
-    // ---------------- Technique: property-style loop (FR2/QR2) ----------------
 
     @Test
     void nextPosition_system_all16Angles_return200() {
@@ -254,7 +249,6 @@ class IlpSystemTests {
         }
         long elapsed = System.currentTimeMillis() - t0;
 
-        // Not a hard requirement; this is a regression tripwire.
         assertTrue(elapsed < 3000, "100 nextPosition calls took too long: " + elapsed + "ms");
     }
 }

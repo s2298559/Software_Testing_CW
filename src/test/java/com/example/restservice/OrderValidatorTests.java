@@ -13,10 +13,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit-style tests for OrderValidator.
- *
- * NOTE: OrderValidator builds its pizza->restaurant map from ILPRestService.getRestaurants().
- * To keep tests deterministic, I pick pizzas and dates dynamically from the live restaurant data
- * (rather than hard-coding assumptions like "R3 is closed on Monday").
  */
 public class OrderValidatorTests {
 
@@ -25,7 +21,6 @@ public class OrderValidatorTests {
 
     @BeforeEach
     void setUp() {
-        // Ensure ILPRestService is initialised (some implementations store RestTemplate statically)
         new ILPRestService(new RestTemplate());
 
         restaurants = ILPRestService.getRestaurants();
@@ -55,7 +50,7 @@ public class OrderValidatorTests {
 
     private LocalDate nextDateFor(DayOfWeek target) {
         LocalDate d = LocalDate.now();
-        for (int i = 0; i < 14; i++) { // within 2 weeks
+        for (int i = 0; i < 14; i++) {
             if (d.getDayOfWeek() == target) return d;
             d = d.plusDays(1);
         }
@@ -78,14 +73,13 @@ public class OrderValidatorTests {
                 return nextDateFor(d);
             }
         }
-        // Edge case: open 7 days a week (rare but possible)
         throw new AssertionError("Restaurant appears open every day; cannot produce a closed-date test: " + r.getName());
     }
 
     private Order baseValidOrder(Restaurant r, Pizza p) {
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza(p.getName(), p.getPriceInPence())));
-        order.setPriceTotalInPence(p.getPriceInPence() + 100); // delivery charge
+        order.setPriceTotalInPence(p.getPriceInPence() + 100);
         order.setOrderDate(nextOpenDate(r));
         order.setCreditCardInformation(new PaymentInfo("1234567890123456", "03/27", "123"));
         return order;
@@ -116,13 +110,12 @@ public class OrderValidatorTests {
 
     @Test
     void testValidateExceedPizzaLimit() {
-        // This fails before restaurant/day checks, so fixed date is fine.
         List<Pizza> pizzas = List.of(
                 new Pizza("R1: Margarita", 1000),
                 new Pizza("R1: Margarita", 1000),
                 new Pizza("R1: Margarita", 1000),
                 new Pizza("R1: Margarita", 1000),
-                new Pizza("R1: Margarita", 1000) // Exceeds limit
+                new Pizza("R1: Margarita", 1000)
         );
         Order order = new Order();
         order.setPizzasInOrder(pizzas);
@@ -152,7 +145,6 @@ public class OrderValidatorTests {
         Restaurant r = anyRestaurantWithMenu();
         Pizza p = anyPizzaFrom(r);
 
-        // Some restaurants may be open every day; in that case this test will throw and surface that fact.
         Order order = baseValidOrder(r, p);
         order.setOrderDate(nextClosedDate(r));
 
@@ -166,7 +158,6 @@ public class OrderValidatorTests {
         Restaurant r = anyRestaurantWithMenu();
         Pizza p = anyPizzaFrom(r);
 
-        // Wrong price should be caught before total and restaurant open checks.
         Order order = baseValidOrder(r, p);
         order.setPizzasInOrder(List.of(new Pizza(p.getName(), p.getPriceInPence() - 100)));
         order.setPriceTotalInPence((p.getPriceInPence() - 100) + 100);
@@ -177,7 +168,7 @@ public class OrderValidatorTests {
     }
 
     // -------------------------
-    // Payment validation (ensure restaurant/date are valid so we reach payment checks)
+    // Payment validation
     // -------------------------
 
     @Test
@@ -186,7 +177,7 @@ public class OrderValidatorTests {
         Pizza p = anyPizzaFrom(r);
 
         Order order = baseValidOrder(r, p);
-        order.setCreditCardInformation(new PaymentInfo("12345", "12/25", "123")); // invalid
+        order.setCreditCardInformation(new PaymentInfo("12345", "12/25", "123"));
 
         OrderValidationResult result = orderValidator.validate(order);
         assertEquals(OrderStatus.INVALID, result.getOrderStatus());

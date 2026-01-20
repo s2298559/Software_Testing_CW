@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Edge/robustness tests for OrderValidator.
- * These are intentionally "nasty" inputs (nulls, malformed fields, boundary counts).
  */
 @SpringBootTest
 public class OrderValidatorEdgeCaseTests {
@@ -27,9 +26,6 @@ public class OrderValidatorEdgeCaseTests {
 
     @BeforeEach
     void setUp() {
-        // Do NOT: orderValidator = new OrderValidator();
-
-        // Derive stable "valid" pizza + open date from live restaurant dataset
         List<Restaurant> restaurants = ILPRestService.getRestaurants();
         assertNotNull(restaurants);
         assertFalse(restaurants.isEmpty());

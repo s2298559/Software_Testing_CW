@@ -14,10 +14,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * Controller unit tests (direct method calls).
- *
- * NOTE:
- * - These are NOT HTTP binding tests. System tests already cover JSON/malformed-body behaviour.
- * - Direct calls bypass Spring validation (@NotNull etc), so null request tests belong in MockMvc/system tests.
  */
 public class ILPRestControllerTests {
 
@@ -116,8 +112,6 @@ public class ILPRestControllerTests {
 
     @Test
     void isCloseTo_boundaryJustInsideAndOutside() {
-        // If your close threshold is 0.00015, this test checks tolerance around it.
-        // Using small deltas; avoid coordinates with 0 due to controller "isValidCoordinate" logic.
         LngLat base = new LngLat(-3.19, 55.94);
 
         LngLat justInside = new LngLat(base.getLng() + 0.000149999, base.getLat());
@@ -137,8 +131,6 @@ public class ILPRestControllerTests {
         assertEquals(200, insideResp.getStatusCodeValue());
         assertEquals(200, outsideResp.getStatusCodeValue());
 
-        // Depending on <= vs < in your implementation, the exact boundary behaviour may differ.
-        // This is still a useful test for documenting edge behaviour.
         assertEquals(Boolean.TRUE, insideResp.getBody(), "Should be close just under threshold");
         assertEquals(Boolean.FALSE, outsideResp.getBody(), "Should not be close just over threshold");
     }
@@ -175,8 +167,6 @@ public class ILPRestControllerTests {
 
     @Test
     void nextPosition_property_allStandardCompassAngles_return200_orRevealWeakness() {
-        // Technique: property-style loop over the 16 allowed angles.
-        // NOTE: Your controller currently appears to reject angle=0 (<=0), so this test will reveal that weakness.
         double[] angles = {
                 0.0, 22.5, 45.0, 67.5, 90.0, 112.5, 135.0, 157.5,
                 180.0, 202.5, 225.0, 247.5, 270.0, 292.5, 315.0, 337.5
@@ -189,8 +179,6 @@ public class ILPRestControllerTests {
 
             ResponseEntity<LngLat> resp = controller.nextPosition(req);
 
-            // Expected per spec: 200 for all 16.
-            // If some return 400 (e.g., angle 0), document as FR2 compliance gap.
             assertTrue(resp.getStatusCodeValue() == 200 || resp.getStatusCodeValue() == 400,
                     "Unexpected status for angle " + a + ": " + resp.getStatusCodeValue());
 
@@ -214,10 +202,8 @@ public class ILPRestControllerTests {
 
     @Test
     void nextPosition_coordinateWithZeroLngOrLat_rejected_revealsPotentialBug() {
-        // Your controller's isValidCoordinate() appears to reject lng==0 or lat==0.
-        // This test documents that behaviour (likely a bug, since 0 is a valid coordinate).
         NextPositionRequest req = new NextPositionRequest();
-        req.setStart(new LngLat(0.0, 55.94)); // lng == 0
+        req.setStart(new LngLat(0.0, 55.94));
         req.setAngle(90.0);
 
         ResponseEntity<LngLat> resp = controller.nextPosition(req);
@@ -239,7 +225,7 @@ public class ILPRestControllerTests {
                 new LngLat(-3.191, 55.945),
                 new LngLat(-3.189, 55.945),
                 new LngLat(-3.189, 55.943),
-                new LngLat(-3.191, 55.943) // closed
+                new LngLat(-3.191, 55.943)
         ));
 
         IsInRegionRequest request = new IsInRegionRequest();
@@ -282,7 +268,6 @@ public class ILPRestControllerTests {
                 new LngLat(-3.191, 55.943),
                 new LngLat(-3.191, 55.945),
                 new LngLat(-3.189, 55.945)
-                // not closed
         ));
 
         IsInRegionRequest request = new IsInRegionRequest();
@@ -297,7 +282,6 @@ public class ILPRestControllerTests {
 
     @Test
     void isInRegion_selfIntersectingPolygon_documentOutcome() {
-        // Bow-tie polygon (self-intersecting). Some implementations reject this; others don't.
         LngLat position = new LngLat(-3.190, 55.944);
 
         Region region = new Region("bowtie", List.of(
@@ -314,8 +298,6 @@ public class ILPRestControllerTests {
 
         ResponseEntity<Boolean> resp = controller.isInRegion(request);
 
-        // If 200: document as weakness (polygon validity not enforced beyond closure).
-        // If 400: great (stronger polygon validity).
         assertTrue(resp.getStatusCodeValue() == 200 || resp.getStatusCodeValue() == 400);
     }
 }

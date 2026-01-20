@@ -12,12 +12,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Adversarial FR3 tests:
  * Approximate "donut-shaped" no-fly zones using concentric polygons.
  *
- * NOTE: Your Region model doesn't support holes, so we represent a donut-like barrier
  * by placing multiple polygons around a point to create a strong "enclosure" effect.
  *
- * Expected behaviour:
- * If AT or pickup is fully enclosed by forbidden polygons, planner should fail with:
- * "No path found to the goal"
  */
 public class DeliveryPathCalculatorDonutNoFlyZoneTests {
 
@@ -25,7 +21,6 @@ public class DeliveryPathCalculatorDonutNoFlyZoneTests {
 
     @BeforeEach
     void setUp() {
-        // Use real central area so we're consistent with system geometry constraints
         ILPRestService live = new ILPRestService(new org.springframework.web.client.RestTemplate());
         realCentral = live.getCentralArea();
         assertFalse(realCentral.isEmpty(), "Central area must be available");
@@ -33,13 +28,10 @@ public class DeliveryPathCalculatorDonutNoFlyZoneTests {
 
     @Test
     void donutNoFlyZonesAroundAT_shouldThrowNoPathFound() {
-        // Synthetic restaurant near Edinburgh so path length is manageable
         Restaurant start = syntheticRestaurantNearEdinburgh("SYN Start Near AT", new LngLat(-3.1910, 55.9450));
 
-        // Order uses restaurant's own unique pizza name
         Order order = orderForRestaurant(start);
 
-        // Build donut-like enclosure around AT using concentric polygons
         List<Region> zones = List.of(
                 regularPolygonAround(DeliveryPathCalculator.AT_LOCATION, 12, 0.0012, "AT_outer"),
                 regularPolygonAround(DeliveryPathCalculator.AT_LOCATION, 12, 0.0008, "AT_inner")
@@ -60,13 +52,11 @@ public class DeliveryPathCalculatorDonutNoFlyZoneTests {
 
     @Test
     void donutNoFlyZonesAroundRestaurant_shouldThrowNoPathFound() {
-        // Restaurant location
         LngLat startPos = new LngLat(-3.1910, 55.9450);
         Restaurant start = syntheticRestaurantNearEdinburgh("SYN Start Trapped", startPos);
 
         Order order = orderForRestaurant(start);
 
-        // Enclosure around restaurant pickup point
         List<Region> zones = List.of(
                 regularPolygonAround(startPos, 12, 0.0012, "R_outer"),
                 regularPolygonAround(startPos, 12, 0.0008, "R_inner")
@@ -120,7 +110,6 @@ public class DeliveryPathCalculatorDonutNoFlyZoneTests {
             double lat = c.getLat() + radius * Math.sin(theta);
             pts.add(new LngLat(lng, lat));
         }
-        // close polygon
         pts.add(pts.getFirst());
         return new Region(name, pts);
     }

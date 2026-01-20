@@ -12,12 +12,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Direct-call "robustness" tests.
- *
- * These are NOT HTTP integration tests. Spring @RequestBody binding + @NotNull validation do NOT run here.
- * So null request objects may throw NPE unless controller explicitly checks them.
- *
- * We keep NPE-expected tests to DOCUMENT weaknesses, and we add nested-field tests that
- * SHOULD be handled by explicit validation inside controller methods.
  */
 public class ILPRestControllerRobustnessTests {
 
@@ -62,7 +56,7 @@ public class ILPRestControllerRobustnessTests {
     }
 
     // -----------------------
-    // Nested null fields (should be 400 if controller validates)
+    // Nested null fields
     // -----------------------
 
     @Test
@@ -76,7 +70,6 @@ public class ILPRestControllerRobustnessTests {
             assertEquals(400, resp.getStatusCodeValue(),
                     "If request.position1 is null, controller should reject with 400");
         } catch (NullPointerException npe) {
-            // acceptable: document weakness
             assertTrue(true, "NPE documents missing nested-null validation");
         }
     }
@@ -172,14 +165,12 @@ public class ILPRestControllerRobustnessTests {
         req.setAngle(Double.NaN);
 
         ResponseEntity<LngLat> resp = controller.nextPosition(req);
-        // If your validation doesn’t check NaN explicitly, it might return 200.
         assertTrue(resp.getStatusCodeValue() == 400 || resp.getStatusCodeValue() == 200,
                 "NaN handling should be defined; got " + resp.getStatusCodeValue());
     }
 
     @Test
     void nextPosition_startWithZeroCoordinate_shouldReturn400_documentPotentialBug() {
-        // Many implementations incorrectly reject lng==0 or lat==0, even though 0 is a valid coordinate.
         NextPositionRequest req = new NextPositionRequest();
         req.setStart(new LngLat(0.0, 55.94));
         req.setAngle(90.0);
@@ -199,7 +190,6 @@ public class ILPRestControllerRobustnessTests {
                 new LngLat(-3.191, 55.943),
                 new LngLat(-3.191, 55.945),
                 new LngLat(-3.189, 55.945)
-                // not closed
         ));
 
         IsInRegionRequest req = new IsInRegionRequest();
@@ -215,7 +205,7 @@ public class ILPRestControllerRobustnessTests {
     void isInRegion_tooFewVertices_shouldReturn400_orDocumentWeakness() {
         Region tiny = new Region("tiny", List.of(
                 new LngLat(-3.191, 55.943),
-                new LngLat(-3.191, 55.943) // degenerate
+                new LngLat(-3.191, 55.943)
         ));
 
         IsInRegionRequest req = new IsInRegionRequest();
@@ -228,7 +218,7 @@ public class ILPRestControllerRobustnessTests {
     }
 
     // -----------------------
-    // Technique: reliability of deterministic endpoints (NR1-ish)
+    // Technique: reliability of deterministic endpoints
     // -----------------------
 
     @Test

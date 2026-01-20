@@ -38,14 +38,12 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
     /**
      * Metamorphic test:
      * Reordering no-fly zones should not change success/failure (and ideally not the path).
-     * If it does, that suggests order-dependence in collision logic (worth documenting).
      */
     @Test
     void zonePermutationInvariance_shouldStillReachGoal() {
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
-        // Baseline
         DeliveryPathCalculator base = new DeliveryPathCalculator(
                 new StubILPRestService(realZones, realCentral),
                 new OrderValidator()
@@ -55,7 +53,6 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
         assertFalse(p1.isEmpty());
         assertEquals(DeliveryPathCalculator.AT_LOCATION, p1.getLast(), "Baseline should reach AT");
 
-        // Shuffled zones
         List<Region> shuffled = new ArrayList<>(realZones);
         Collections.shuffle(shuffled, new Random(12345));
 
@@ -68,15 +65,12 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
         assertFalse(p2.isEmpty());
         assertEquals(DeliveryPathCalculator.AT_LOCATION, p2.getLast(), "Shuffled zones should still reach AT");
 
-        // Optional stronger check: often the exact path should be identical if algorithm is deterministic.
-        // If this fails, don't delete it — it reveals order-dependence.
         assertEquals(p1, p2, "Path changed when zones were permuted (possible order-dependence)");
     }
 
     /**
      * Metamorphic test:
      * Adding irrelevant far-away no-fly zones should not change the computed path.
-     * If it does, likely indicates unintended dependence on zone list length/order.
      */
     @Test
     void addingFarAwayZones_shouldNotChangePath() {
@@ -90,9 +84,8 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
         List<LngLat> baseline = base.calculatePath(order);
         assertEquals(DeliveryPathCalculator.AT_LOCATION, baseline.getLast());
 
-        // Inflate zones with far-away synthetic polygons
         List<Region> inflated = new ArrayList<>(realZones);
-        inflated.addAll(generateFarAwayZones(200)); // tune count as you like
+        inflated.addAll(generateFarAwayZones(200));
 
         DeliveryPathCalculator inflatedCalc = new DeliveryPathCalculator(
                 new StubILPRestService(inflated, realCentral),
@@ -101,7 +94,6 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
         List<LngLat> inflatedPath = inflatedCalc.calculatePath(order);
         assertEquals(DeliveryPathCalculator.AT_LOCATION, inflatedPath.getLast());
 
-        // Strong check: should be identical if irrelevant zones truly irrelevant.
         assertEquals(baseline, inflatedPath,
                 "Path changed after adding irrelevant far-away zones (reveals sensitivity / potential inefficiency)");
     }
@@ -128,8 +120,8 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
         assertTrue(path.size() >= 2);
 
         double step = 0.00015;
-        double distTol = 5e-7;   // tolerant: floating arithmetic + rounding
-        double angTol = 1e-3;    // degrees tolerance for direction snapping
+        double distTol = 5e-7;
+        double angTol = 1e-3;
 
         for (int i = 0; i < path.size() - 1; i++) {
             LngLat a = path.get(i);
@@ -141,7 +133,6 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
             double dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist <= distTol) {
-                // hover: allowed
                 continue;
             }
 
@@ -151,9 +142,7 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
             double angle = Math.toDegrees(Math.atan2(dy, dx));
             if (angle < 0) angle += 360.0;
 
-            // nearest multiple of 22.5
             double snapped = Math.round(angle / 22.5) * 22.5;
-            // normalize snapped to [0,360)
             snapped = (snapped % 360.0 + 360.0) % 360.0;
 
             double diff = Math.abs(angle - snapped);
@@ -168,7 +157,6 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
     /**
      * NR1 reliability test:
      * Running the same input twice should produce the same path (deterministic behaviour).
-     * If not, there is hidden randomness / unstable ordering.
      */
     @Test
     void determinism_sameInputProducesSamePath_NR1() {
@@ -190,13 +178,9 @@ public class DeliveryPathCalculatorMetamorphicAndLegalityTests {
      * Termination / robustness:
      * In an unreachable scenario (AT trapped), algorithm should fail quickly
      * rather than hang / loop forever.
-     *
-     * We enforce a hard timeout and check for required message:
-     * "No path found to the goal"
      */
     @Test
     void unreachable_ATTrapped_shouldFailFast_withRequiredMessage() {
-        // Create a donut-like enclosure around AT (concentric polygons)
         List<Region> trappedZones = List.of(
                 regularPolygonAround(DeliveryPathCalculator.AT_LOCATION, 12, 0.0012, "AT_outer"),
                 regularPolygonAround(DeliveryPathCalculator.AT_LOCATION, 12, 0.0008, "AT_inner")

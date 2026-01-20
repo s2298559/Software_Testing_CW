@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class OrderValidationResultTests {
 
-    // Test default constructor
     @Test
     void testDefaultConstructor() {
         OrderValidationResult result = new OrderValidationResult();
@@ -15,7 +14,6 @@ public class OrderValidationResultTests {
         assertEquals(OrderValidationCode.UNDEFINED, result.getValidationCode());
     }
 
-    // Test parameterized constructor
     @Test
     void testParameterizedConstructor() {
         OrderValidationResult result = new OrderValidationResult(OrderStatus.VALID, OrderValidationCode.NO_ERROR);
@@ -24,7 +22,6 @@ public class OrderValidationResultTests {
         assertEquals(OrderValidationCode.NO_ERROR, result.getValidationCode());
     }
 
-    // Test getter and setter for OrderStatus
     @Test
     void testGetSetOrderStatus() {
         OrderValidationResult result = new OrderValidationResult();
@@ -35,7 +32,6 @@ public class OrderValidationResultTests {
         assertEquals(OrderStatus.VALID, result.getOrderStatus());
     }
 
-    // Test getter and setter for OrderValidationCode
     @Test
     void testGetSetValidationCode() {
         OrderValidationResult result = new OrderValidationResult();
@@ -45,8 +41,7 @@ public class OrderValidationResultTests {
         result.setValidationCode(OrderValidationCode.EXPIRY_DATE_INVALID);
         assertEquals(OrderValidationCode.EXPIRY_DATE_INVALID, result.getValidationCode());
     }
-
-    // Test consistency between getter and setter values
+    
     @Test
     void testConsistencyBetweenSettersAndGetters() {
         OrderValidationResult result = new OrderValidationResult();

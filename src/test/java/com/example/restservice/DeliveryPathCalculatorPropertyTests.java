@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * "Property-style" checks: validate constraints that should hold for any generated path.
- * These tests may fail if the implementation is approximate, which is still valuable.
  */
 public class DeliveryPathCalculatorPropertyTests {
 
@@ -23,7 +22,6 @@ public class DeliveryPathCalculatorPropertyTests {
         ilpRestService = new ILPRestService(restTemplate);
         calculator = new DeliveryPathCalculator(ilpRestService, new OrderValidator());
 
-        // Ensure service is reachable for these integration-style checks
         assertFalse(ilpRestService.getNoFlyZones().isEmpty(), "No-fly zones missing from live service");
         assertFalse(ilpRestService.getCentralArea().isEmpty(), "Central area missing from live service");
         assertFalse(ILPRestService.getRestaurants().isEmpty(), "Restaurants missing from live service");
@@ -56,14 +54,11 @@ public class DeliveryPathCalculatorPropertyTests {
         List<LngLat> path = calculator.calculatePath(order);
         assertTrue(path.size() >= 4);
 
-        // Start hover
         assertEquals(path.get(0), path.get(1), "Expected hover at pickup (first two points equal)");
 
-        // End hover
         int n = path.size();
         assertEquals(path.get(n - 2), path.get(n - 1), "Expected hover at delivery (last two points equal)");
 
-        // OPTIONAL stricter check: if your implementation hovers elsewhere, this will fail and reveal that behaviour.
         int hoverCount = 0;
         for (int i = 0; i < path.size() - 1; i++) {
             if (path.get(i).equals(path.get(i + 1))) hoverCount++;
@@ -115,7 +110,6 @@ public class DeliveryPathCalculatorPropertyTests {
 
     @Test
     void testCentralAreaAndNoFlyZonesAreClosed_FR3_FR4_property() {
-        // Central area closed g6
         for (Region r : ilpRestService.getCentralArea()) {
             List<LngLat> v = r.getVertices();
             assertNotNull(v);
@@ -127,7 +121,6 @@ public class DeliveryPathCalculatorPropertyTests {
             assertEquals(first.getLat(), last.getLat(), 1e-12, "Central Area must be closed");
         }
 
-        // No-fly zones closed
         for (Region r : ilpRestService.getNoFlyZones()) {
             List<LngLat> v = r.getVertices();
             assertNotNull(v);

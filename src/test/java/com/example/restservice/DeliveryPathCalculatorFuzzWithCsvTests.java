@@ -38,7 +38,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
         List<Region> realCentral = live.getCentralArea();
         assertFalse(realCentral.isEmpty(), "Central area missing from live service");
 
-        // Order that should work normally
         Order order = new Order();
         order.setPizzasInOrder(List.of(new Pizza("R1: Margarita", 1000)));
 
@@ -46,7 +45,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
 
         Random rng = new Random(20260115L);
 
-        // Output directory + file naming
         Path outDir = Paths.get("target", "test-results");
         Files.createDirectories(outDir);
 
@@ -57,7 +55,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
         try (BufferedWriter zonesCsv = Files.newBufferedWriter(zonesCsvPath, StandardOpenOption.CREATE_NEW);
              BufferedWriter trialsCsv = Files.newBufferedWriter(trialsCsvPath, StandardOpenOption.CREATE_NEW)) {
 
-            // headers
             zonesCsv.write(String.join(",",
                     "timestamp",
                     "trial",
@@ -91,7 +88,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
                     int v = (z.getVertices() == null) ? 0 : z.getVertices().size();
                     maxV = Math.max(maxV, v);
 
-                    // Write zone row (includes full vertices encoded safely)
                     zonesCsv.write(String.join(",",
                             csvSafe(Instant.now().toString()),
                             Integer.toString(t),
@@ -132,7 +128,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
 
                 long dt = System.currentTimeMillis() - t0;
 
-                // Write trial summary row
                 trialsCsv.write(String.join(",",
                         csvSafe(Instant.now().toString()),
                         Integer.toString(t),
@@ -144,7 +139,6 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
                 ));
                 trialsCsv.newLine();
 
-                // Main robustness assertion: no uncontrolled throwables
                 assertNotEquals("UNCONTROLLED_THROWABLE", out.outcome,
                         "Uncontrolled throwable during fuzz trial " + t + ": " + out.message);
             }
@@ -163,12 +157,11 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
 
     private static Region randomPolygonZone(Random rng, String name) {
 
-        // Rough Edinburgh area so zones can matter
         double lngCenter = -3.19 + (rng.nextDouble() - 0.5) * 0.02;
         double latCenter = 55.944 + (rng.nextDouble() - 0.5) * 0.02;
         LngLat c = new LngLat(lngCenter, latCenter);
 
-        int n = 3 + rng.nextInt(8); // 3..10
+        int n = 3 + rng.nextInt(8);
 
         double radius = 0.00005 + rng.nextDouble() * 0.0012;
         if (rng.nextDouble() < 0.15) {
@@ -193,13 +186,12 @@ public class DeliveryPathCalculatorFuzzWithCsvTests {
             pts.add(new LngLat(lng, lat));
         }
 
-        pts.add(pts.getFirst()); // close polygon
+        pts.add(pts.getFirst());
         return new Region(name, pts);
     }
 
     private static String encodeVertices(List<LngLat> verts) {
         if (verts == null) return "";
-        // compact encoding: lng:lat;lng:lat;...
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < verts.size(); i++) {
             LngLat p = verts.get(i);

@@ -82,7 +82,6 @@ public class GeoJsonConverterValidityTests {
             JsonNode coords = root.path("geometry").path("coordinates");
             assertEquals(0, coords.size(), "Empty path should produce empty coordinates array");
         } catch (RuntimeException ex) {
-            // acceptable if your spec says empty path is invalid; keep this to document behaviour
             assertTrue(true);
         }
     }
@@ -116,7 +115,6 @@ public class GeoJsonConverterValidityTests {
 
     @Test
     void testGeoJsonPreservesPrecision_QR2() throws Exception {
-        // Tiny deltas should survive JSON encode/decode reasonably
         double lng = -3.1900000000001;
         double lat = 55.9400000000002;
 
@@ -150,17 +148,15 @@ public class GeoJsonConverterValidityTests {
 
     @Test
     void testGeoJsonStatistical_manyRandomPaths_areAlwaysValidJsonAndShape() throws Exception {
-        // Technique: statistical / fuzz-ish testing. Not true property testing library, but useful.
         Random rng = new Random(12345);
 
         for (int i = 0; i < 50; i++) {
-            int n = 1 + rng.nextInt(20); // 1..20 points
+            int n = 1 + rng.nextInt(20);
             List<LngLat> path = new ArrayList<>();
-            double lng = -3.20 + rng.nextDouble() * 0.05;  // roughly Edinburgh-ish
+            double lng = -3.20 + rng.nextDouble() * 0.05;
             double lat = 55.92 + rng.nextDouble() * 0.05;
 
             for (int j = 0; j < n; j++) {
-                // small random walk
                 lng += (rng.nextDouble() - 0.5) * 0.001;
                 lat += (rng.nextDouble() - 0.5) * 0.001;
                 path.add(new LngLat(lng, lat));
