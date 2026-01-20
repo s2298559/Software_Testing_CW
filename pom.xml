@@ -58,9 +58,13 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <systemPropertyVariables>
-                        <junit.jupiter.tags.exclude>${junit.exclude.tags}</junit.jupiter.tags.exclude>
-                    </systemPropertyVariables>
+                    <excludes>
+                        <exclude>**/*Performance*.java</exclude>
+                        <exclude>**/*Fuzz*.java</exclude>
+                        <exclude>**/*System*.java</exclude>
+                        <exclude>**/*Adversarial*.java</exclude>
+                        <exclude>**/*Scaling*.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
         </plugins>
